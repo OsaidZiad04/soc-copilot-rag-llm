@@ -1,0 +1,29 @@
+services:
+
+  pgvector:
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: soc_pgvector
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docker/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-soc_copilot}
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    networks:
+      - soc_backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-soc_copilot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  soc_backend:
+    driver: bridge
+
+volumes:
+  pgvector_data:

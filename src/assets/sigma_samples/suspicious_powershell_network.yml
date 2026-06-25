@@ -1,0 +1,19 @@
+title: Suspicious PowerShell Network Connection
+id: soc-copilot-sample-powershell-network
+description: Detects PowerShell connecting to a suspicious remote IP address.
+tags:
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_process:
+    Image|endswith:
+      - powershell.exe
+  selection_ip:
+    DestinationIp|contains:
+      - 185.220.101.45
+  condition: selection_process and selection_ip
+level: high
+

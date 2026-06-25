@@ -1,0 +1,42 @@
+{
+  "windows": {
+    "4624": {
+      "name": "An account was successfully logged on",
+      "category": "Logon/Logoff",
+      "relevance": "high",
+      "mitre": ["T1078", "T1110"],
+      "description": "Generated when a logon session is created.",
+      "investigation_tips": "Check for unusual hours, source IPs, logon types (Type 3=Network, Type 10=RemoteInteractive)"
+    },
+    "4625": {"name": "An account failed to log on", "category": "Logon/Logoff", "relevance": "high", "mitre": ["T1110"], "description": "Failed logon attempt.", "investigation_tips": "Multiple failures = brute force (T1110). Check TargetUserName and IpAddress."},
+    "4648": {"name": "Logon using explicit credentials", "category": "Logon/Logoff", "relevance": "high", "mitre": ["T1078"], "description": "Explicit credential use.", "investigation_tips": "Common in lateral movement and pass-the-hash attacks."},
+    "4688": {"name": "A new process has been created", "category": "Process Tracking", "relevance": "critical", "mitre": ["T1059", "T1204"], "description": "Process creation event.", "investigation_tips": "Check NewProcessName vs ParentProcessName. Suspicious: powershell from word/excel."},
+    "4698": {"name": "A scheduled task was created", "category": "Task Scheduler", "relevance": "high", "mitre": ["T1053"], "description": "Scheduled task persistence.", "investigation_tips": "Review TaskContent for suspicious commands."},
+    "4720": {"name": "A user account was created", "category": "Account Management", "relevance": "high", "mitre": ["T1136"], "description": "New user account created.", "investigation_tips": "Unexpected account creation = persistence mechanism."},
+    "4732": {"name": "Member added to security-enabled local group", "category": "Account Management", "relevance": "high", "mitre": ["T1098"], "description": "Group membership change.", "investigation_tips": "Adding to Administrators group = privilege escalation."},
+    "4768": {"name": "Kerberos TGT requested", "category": "Account Logon", "relevance": "medium", "mitre": ["T1558"], "description": "Kerberos authentication.", "investigation_tips": "Watch for AS-REP roasting (no pre-auth) and golden ticket attacks."},
+    "4769": {"name": "Kerberos service ticket requested", "category": "Account Logon", "relevance": "medium", "mitre": ["T1558.003"], "description": "TGS request.", "investigation_tips": "Multiple TGS requests for sensitive SPNs = Kerberoasting."},
+    "4776": {"name": "NTLM authentication attempted", "category": "Account Logon", "relevance": "medium", "mitre": ["T1110", "T1550"], "description": "NTLM credential validation.", "investigation_tips": "Unexpected NTLM from workstations = pass-the-hash potential."},
+    "7045": {"name": "New service installed", "category": "System", "relevance": "high", "mitre": ["T1543.003"], "description": "Service installation.", "investigation_tips": "Malware often installs services for persistence."},
+    "4103": {"name": "PowerShell pipeline execution", "category": "PowerShell", "relevance": "critical", "mitre": ["T1059.001"], "description": "PowerShell module logging.", "investigation_tips": "Look for encoded commands, DownloadString, IEX patterns."},
+    "4104": {"name": "PowerShell script block logging", "category": "PowerShell", "relevance": "critical", "mitre": ["T1059.001"], "description": "Full PowerShell script content.", "investigation_tips": "Most detailed PowerShell logging. Check for obfuscation."}
+  },
+  "sysmon": {
+    "1": {"name": "Process Creation", "category": "Process", "relevance": "critical", "mitre": ["T1059"], "description": "Process created with full command line.", "investigation_tips": "Includes hash, parent process, command line. Best process tracking source."},
+    "3": {"name": "Network Connection", "category": "Network", "relevance": "high", "mitre": ["T1071", "T1041"], "description": "Outbound network connection.", "investigation_tips": "Monitor unexpected outbound to rare IPs/ports. C2 detection."},
+    "7": {"name": "Image Loaded", "category": "DLL", "relevance": "medium", "mitre": ["T1129", "T1574"], "description": "DLL loaded into process.", "investigation_tips": "DLL hijacking and injection detection."},
+    "8": {"name": "CreateRemoteThread", "category": "Process", "relevance": "critical", "mitre": ["T1055"], "description": "Remote thread created in another process.", "investigation_tips": "Strong indicator of process injection."},
+    "11": {"name": "File Created", "category": "File", "relevance": "medium", "mitre": ["T1105"], "description": "File creation event.", "investigation_tips": "Track malware drops, downloads to temp directories."},
+    "12": {"name": "Registry Object Added/Deleted", "category": "Registry", "relevance": "high", "mitre": ["T1547", "T1112"], "description": "Registry modification.", "investigation_tips": "Run keys, services, COM hijacking persistence."},
+    "13": {"name": "Registry Value Set", "category": "Registry", "relevance": "high", "mitre": ["T1547"], "description": "Registry value modified.", "investigation_tips": "HKCU\\Run, HKLM\\Run = autorun persistence."},
+    "22": {"name": "DNS Query", "category": "Network", "relevance": "high", "mitre": ["T1071.004"], "description": "DNS lookup performed.", "investigation_tips": "DGA domains, DNS tunneling, C2 beaconing via DNS."}
+  },
+  "log_types": {
+    "Security": {"description": "Windows Security events — logon, account mgmt, policy changes", "key_events": ["4624", "4625", "4648", "4688", "4720", "4732", "4768", "4769"]},
+    "Sysmon": {"description": "Sysinternals Sysmon — enhanced process, network, registry tracking", "key_events": ["1", "3", "7", "8", "11", "12", "13", "22"]},
+    "System": {"description": "Windows System events — services, drivers, system errors", "key_events": ["7045", "7036"]},
+    "PowerShell": {"description": "PowerShell script block and module logging", "key_events": ["4103", "4104"]},
+    "WinRM": {"description": "Windows Remote Management — remote PowerShell sessions", "key_events": []},
+    "Application": {"description": "Application-level events and errors", "key_events": []}
+  }
+}
